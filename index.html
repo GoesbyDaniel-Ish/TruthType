@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruthType - Active Recall Typing</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      width: 100%;
+      max-width: 650px;
+      background-color: #1e1e1e;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    h1 {
+      margin-top: 0;
+      color: #bb86fc;
+      font-size: 1.8rem;
+    }
+    textarea, input {
+      width: 100%;
+      background-color: #2d2d2d;
+      border: 2px solid #3f3f3f;
+      color: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus, input:focus {
+      border-color: #bb86fc;
+    }
+    button {
+      background-color: #bb86fc;
+      color: #000000;
+      border: none;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 12px;
+      font-size: 1rem;
+    }
+    button:hover {
+      background-color: #9965f4;
+    }
+    .prompt-box {
+      background-color: #2d2d2d;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 1.2rem;
+      line-height: 1.5;
+      border-left: 4px solid #bb86fc;
+    }
+    .stats {
+      color: #a0a0a0;
+      font-size: 0.9rem;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>TruthType</h1>
+
+    <!-- INPUT VIEW -->
+    <div id="setup-view">
+      <label for="notes-input" style="display: block; margin-bottom: 8px; font-weight: bold;">
+        Paste APUSH Notes or Terms:
+      </label>
+      <textarea id="notes-input" rows="8" placeholder="Example: Stamp Act (1765): Direct tax on paper goods&#10;Townshend Acts: Taxes on glass, lead, paint, paper, and tea"></textarea>
+      <button onclick="startGame()">Start Typing Session</button>
+    </div>
+
+    <!-- GAMEPLAY VIEW -->
+    <div id="game-view" class="hidden">
+      <div class="stats" id="progress-text">Question 1 of 1</div>
+      <div class="prompt-box" id="prompt-display">Prompt goes here...</div>
+      <input type="text" id="answer-input" placeholder="Type answer here..." autocomplete="off" autofocus>
+    </div>
+  </div>
+
+  <script>
+    let deck = [];
+    let currentIndex = 0;
+    let score = 0;
+
+    function parseNotesToQA(rawText) {
+      if (!rawText) return [];
+      const lines = rawText.split(/\n+/).map(l => l.replace(/^[\s•*-]+/, '').trim()).filter(Boolean);
+      const qaPairs = [];
+
+      for (const line of lines) {
+        if (line.includes(':') || line.includes(' - ')) {
+          const delimiter = line.includes(':') ? ':' : ' - ';
+          const parts = line.split(delimiter);
+          const term = parts[0].trim();
+          const definition = parts.slice(1).join(delimiter).trim();
+
+          if (term && definition) {
+            qaPairs.push({ prompt: definition, answer: term });
+            continue;
+          }
+        }
+
+        const sentences = line.split(/(?<=[.!?])\s+/);
+        for (const sentence of sentences) {
+          const match = sentence.match(/\b([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*)*|\d{4})\b/);
+          if (match) {
+            const targetWord = match[0];
+            const prompt = sentence.replace(targetWord, '________');
+            qaPairs.push({ prompt: prompt.trim(), answer: targetWord.trim() });
+          }
+        }
+      }
+      return qaPairs;
+    }
+
+    function startGame() {
+      const rawText = document.getElementById('notes-input').value;
+      deck = parseNotesToQA(rawText);
+
+      if (deck.length === 0) {
+        alert('Please paste valid terms (e.g., "Term: Definition") or full sentences!');
+        return;
+      }
+
+      currentIndex = 0;
+      score = 0;
+      document.getElementById('setup-view').classList.add('hidden');
+      document.getElementById('game-view').classList.remove('hidden');
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const currentQA = deck[currentIndex];
+      document.getElementById('progress-text').innerText = `Question ${currentIndex + 1} of ${deck.length} | Score: ${score}`;
+      document.getElementById('prompt-display').innerText = currentQA.prompt;
+      
+      const inputEl = document.getElementById('answer-input');
+      inputEl.value = '';
+      inputEl.focus();
+    }
+
+    document.getElementById('answer-input').addEventListener('input', (e) => {
+      const userInput = e.target.value.trim().toLowerCase();
+      const targetAnswer = deck[currentIndex].answer.toLowerCase();
+
+      if (userInput === targetAnswer) {
+        score++;
+        currentIndex++;
+
+        if (currentIndex < deck.length) {
+          loadQuestion();
+        } else {
+          alert(`Session complete! Final Score: ${score}/${deck.length}`);
+          document.getElementById('game-view').classList.add('hidden');
+          document.getElementById('setup-view').classList.remove('hidden');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
